@@ -1,0 +1,46 @@
+// Import variables from landing page
+@import './landing-page.scss';
+
+// Navbar styles
+.navbar-custom {
+  background-color: rgba($dark-color, 0.9) !important;
+  backdrop-filter: blur(10px);
+  padding: 0.75rem 0;
+  
+  .navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: $light-color;
+    
+    &:hover {
+      color: $primary-color;
+    }
+  }
+  
+  .nav-link {
+    color: $light-color;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 4px;
+    
+    &:hover {
+      background-color: rgba($light-color, 0.1);
+      color: $primary-color;
+    }
+    
+    &.active {
+      background-color: rgba($primary-color, 0.2);
+      color: $primary-color;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .navbar-custom {
+    .nav-link {
+      padding: 0.5rem;
+    }
+  }
+} 

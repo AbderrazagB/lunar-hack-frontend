@@ -1,0 +1,105 @@
+// Import variables from landing page
+@import './landing-page.scss';
+
+.lost-and-found-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, rgba($light-color, 0.8), rgba($primary-color, 0.1));
+  padding-top: 80px;
+  
+  .lost-found-card {
+    border-radius: 10px;
+    overflow: hidden;
+    @include box-shadow;
+    
+    .card-header {
+      padding: 1.5rem;
+      
+      h2 {
+        font-weight: 700;
+        font-size: 1.5rem;
+      }
+    }
+    
+    .nav-tabs {
+      border-bottom: 2px solid rgba($dark-color, 0.1);
+      
+      .nav-link {
+        border: none;
+        color: $dark-color;
+        font-weight: 600;
+        padding: 1rem 1.5rem;
+        transition: all $transition-speed ease;
+        
+        &:hover {
+          color: $primary-color;
+          background-color: transparent;
+        }
+        
+        &.active {
+          color: $primary-color;
+          border-bottom: 3px solid $primary-color;
+          background-color: transparent;
+        }
+      }
+    }
+    
+    .add-item-button {
+      border-radius: 30px;
+      padding: 0.5rem 1.5rem;
+      transition: all $transition-speed ease;
+      
+      &:hover {
+        transform: translateY(-3px);
+        @include box-shadow;
+      }
+    }
+    
+    .item-card {
+      border-radius: 8px;
+      transition: all $transition-speed ease;
+      border: 1px solid rgba($dark-color, 0.1);
+      
+      &:hover {
+        transform: translateY(-5px);
+        @include box-shadow;
+      }
+      
+      .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        
+        &.open {
+          background-color: rgba($primary-color, 0.1);
+          color: $primary-color;
+        }
+        
+        &.closed {
+          background-color: rgba($accent-color, 0.1);
+          color: $accent-color;
+        }
+      }
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .lost-and-found-page {
+    .lost-found-card {
+      .nav-tabs {
+        .nav-link {
+          padding: 0.75rem 1rem;
+          font-size: 0.9rem;
+        }
+      }
+      
+      .item-card {
+        .card-body {
+          padding: 1rem;
+        }
+      }
+    }
+  }
+} 
