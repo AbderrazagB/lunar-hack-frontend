@@ -1,24 +1,191 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Form, Tabs, Tab } from 'react-bootstrap';
-import { FaSearch, FaPlus } from 'react-icons/fa';
+import React, { useState, useCallback } from 'react';
+import { Container, Row, Col, Card, Button, Form, Tabs, Tab, Alert } from 'react-bootstrap';
+import { FaSearch, FaCloudUploadAlt, FaExchangeAlt } from 'react-icons/fa';
 import UniversalNavbar from '../navbar/UniversalNavbar';
+import axios from 'axios';
 import '../../styles/lost-and-found.scss';
 
 const LostAndFoundPage = () => {
   const [activeTab, setActiveTab] = useState('lost');
+  const [formData, setFormData] = useState({
+    description: '',
+    email: '',
+    image: null
+  });
+  const [dragActive, setDragActive] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [alert, setAlert] = useState({ show: false, variant: '', message: '' });
+  const [loading, setLoading] = useState(false);
 
-  // Sample data for demonstration
-  const lostItems = [
-    { id: 1, name: 'Laptop', description: 'MacBook Pro 13" with a blue case', location: 'Library', date: '2023-04-15', status: 'Open' },
-    { id: 2, name: 'Phone', description: 'iPhone 13 with a black case', location: 'Cafeteria', date: '2023-04-14', status: 'Open' },
-    { id: 3, name: 'Backpack', description: 'Nike black backpack with laptop compartment', location: 'Student Center', date: '2023-04-13', status: 'Closed' }
-  ];
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave" || e.type === "drop") {
+      setDragActive(false);
+    }
+  };
 
-  const foundItems = [
-    { id: 1, name: 'Water Bottle', description: 'Hydro Flask 32oz in blue', location: 'Gym', date: '2023-04-16', status: 'Open' },
-    { id: 2, name: 'Keys', description: 'Car keys with university keychain', location: 'Parking Lot', date: '2023-04-15', status: 'Open' },
-    { id: 3, name: 'Wallet', description: 'Brown leather wallet with student ID', location: 'Science Building', date: '2023-04-14', status: 'Closed' }
-  ];
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleFiles(file);
+    }
+  };
+
+  const handleFiles = (file) => {
+    if (file && file.type.startsWith('image/')) {
+      // Revoke the old preview URL to avoid memory leaks
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setFormData(prev => ({ ...prev, image: file }));
+      const fileUrl = URL.createObjectURL(file);
+      setPreviewUrl(fileUrl);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setAlert({ show: false, variant: '', message: '' });
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('description', formData.description);
+    formDataToSend.append('email', formData.email);
+    if (formData.image) {
+      formDataToSend.append('image', formData.image);
+    }
+
+    try {
+      const endpoint = activeTab === 'lost' ? '/report/lost' : '/report/found';
+      const response = await axios.post(endpoint, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setAlert({
+        show: true,
+        variant: 'success',
+        message: `Item successfully reported as ${activeTab}!`
+      });
+      
+      // Clean up old preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      
+      setFormData({ description: '', email: '', image: null });
+      setPreviewUrl(null);
+    } catch (error) {
+      setAlert({
+        show: true,
+        variant: 'danger',
+        message: error.response?.data?.detail || 'An error occurred while submitting the form.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFiles(file);
+    }
+  };
+
+  // Clean up preview URL when component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const renderForm = () => (
+    <Form onSubmit={handleSubmit} className="report-form">
+      <Form.Group className="mb-4">
+        <Form.Label>Description</Form.Label>
+        <Form.Control
+          as="textarea"
+          rows={3}
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          required
+          placeholder="Please provide a detailed description of the item"
+          className="form-control-lg"
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-4">
+        <Form.Label>Email</Form.Label>
+        <Form.Control
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+          placeholder="Enter your email address"
+          className="form-control-lg"
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-4">
+        <div
+          className={`drag-drop-zone ${dragActive ? 'drag-active' : ''} ${previewUrl ? 'has-image' : ''}`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            onChange={handleFileChange}
+            accept="image/*"
+            id="file-input"
+            className="file-input"
+          />
+          <label htmlFor="file-input" className="upload-label">
+            {previewUrl ? (
+              <>
+                <div className="image-preview">
+                  <img src={previewUrl} alt="Preview" />
+                </div>
+                <div className="change-image">
+                  <FaExchangeAlt size={20} />
+                  <p>Click or drag to change image</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <FaCloudUploadAlt size={40} />
+                <p>Drag and drop your image here or click to select</p>
+              </>
+            )}
+          </label>
+        </div>
+      </Form.Group>
+
+      <div className="d-flex justify-content-end">
+        <Button 
+          variant="primary" 
+          type="submit" 
+          disabled={loading}
+          size="lg"
+          className="submit-button"
+        >
+          {loading ? 'Submitting...' : 'Submit Report'}
+        </Button>
+      </div>
+    </Form>
+  );
 
   return (
     <div className="lost-and-found-page">
@@ -26,76 +193,36 @@ const LostAndFoundPage = () => {
       
       <Container className="py-5">
         <Row className="justify-content-center">
-          <Col lg={10}>
-            <Card className="lost-found-card">
-              <Card.Header className="bg-primary text-white">
+          <Col lg={8}>
+            <Card className="form-card">
+              <Card.Header>
                 <h2 className="mb-0"><FaSearch className="me-2" /> Lost & Found</h2>
               </Card.Header>
-              <Card.Body>
+              <Card.Body className="p-4">
+                {alert.show && (
+                  <Alert variant={alert.variant} onClose={() => setAlert({ show: false })} dismissible>
+                    {alert.message}
+                  </Alert>
+                )}
+                
                 <Tabs
                   activeKey={activeTab}
-                  onSelect={(k) => setActiveTab(k)}
-                  className="mb-4"
+                  onSelect={(k) => {
+                    setActiveTab(k);
+                    if (previewUrl) {
+                      URL.revokeObjectURL(previewUrl);
+                    }
+                    setFormData({ description: '', email: '', image: null });
+                    setPreviewUrl(null);
+                    setAlert({ show: false });
+                  }}
+                  className="mb-4 custom-tabs"
                 >
-                  <Tab eventKey="lost" title="Lost Items">
-                    <div className="d-flex justify-content-end mb-3">
-                      <Button variant="primary" className="add-item-button">
-                        <FaPlus className="me-2" /> Report Lost Item
-                      </Button>
-                    </div>
-                    <div className="items-list">
-                      {lostItems.map(item => (
-                        <Card key={item.id} className="item-card mb-3">
-                          <Card.Body>
-                            <div className="d-flex justify-content-between align-items-center">
-                              <div>
-                                <h5 className="mb-1">{item.name}</h5>
-                                <p className="mb-1 text-muted">{item.description}</p>
-                                <small className="text-muted">
-                                  <strong>Location:</strong> {item.location} | 
-                                  <strong> Date:</strong> {item.date}
-                                </small>
-                              </div>
-                              <div>
-                                <span className={`status-badge ${item.status.toLowerCase()}`}>
-                                  {item.status}
-                                </span>
-                              </div>
-                            </div>
-                          </Card.Body>
-                        </Card>
-                      ))}
-                    </div>
+                  <Tab eventKey="lost" title="Report Lost Item">
+                    {renderForm()}
                   </Tab>
-                  <Tab eventKey="found" title="Found Items">
-                    <div className="d-flex justify-content-end mb-3">
-                      <Button variant="primary" className="add-item-button">
-                        <FaPlus className="me-2" /> Report Found Item
-                      </Button>
-                    </div>
-                    <div className="items-list">
-                      {foundItems.map(item => (
-                        <Card key={item.id} className="item-card mb-3">
-                          <Card.Body>
-                            <div className="d-flex justify-content-between align-items-center">
-                              <div>
-                                <h5 className="mb-1">{item.name}</h5>
-                                <p className="mb-1 text-muted">{item.description}</p>
-                                <small className="text-muted">
-                                  <strong>Location:</strong> {item.location} | 
-                                  <strong> Date:</strong> {item.date}
-                                </small>
-                              </div>
-                              <div>
-                                <span className={`status-badge ${item.status.toLowerCase()}`}>
-                                  {item.status}
-                                </span>
-                              </div>
-                            </div>
-                          </Card.Body>
-                        </Card>
-                      ))}
-                    </div>
+                  <Tab eventKey="found" title="Report Found Item">
+                    {renderForm()}
                   </Tab>
                 </Tabs>
               </Card.Body>
